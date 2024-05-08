@@ -85,12 +85,6 @@ class ExtendedMoves(IntEnum):
     B3 = 17
     
 P2Moves = (0, 1, 2, 4, 7, 10, 13, 15, 16, 17)
-    
-class Symmetry(IntEnum):
-    NN = 0
-    F2 = 1
-    U4 = 2
-    LR = 3
 
 class Corners(IntEnum):
     URF = 0
@@ -193,42 +187,6 @@ EdgeOrientationMoveMap = {
     Moves.B: (0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 1)
 }
 
-CornerPositionSymmetryMap = {
-    Symmetry.NN: (Corners.URF, Corners.UFL, Corners.ULB, Corners.UBR, \
-        Corners.DFR, Corners.DLF, Corners.DBL, Corners.DRB),
-    Symmetry.F2: (Corners.DLF, Corners.DFR, Corners.DRB, Corners.DBL, \
-        Corners.UFL, Corners.URF, Corners.UBR, Corners.ULB),
-    Symmetry.U4: (Corners.UBR, Corners.URF, Corners.UFL, Corners.ULB, \
-        Corners.DRB, Corners.DFR, Corners.DLF, Corners.DBL),
-    Symmetry.LR: (Corners.UFL, Corners.URF, Corners.UBR, Corners.ULB, \
-        Corners.DLF, Corners.DFR, Corners.DRB, Corners.DBL)
-}
-
-CornerOrientationSymmetryMap = {
-    Symmetry.NN: (0, 0, 0, 0, 0, 0, 0, 0),
-    Symmetry.F2: (0, 0, 0, 0, 0, 0, 0, 0),
-    Symmetry.U4: (0, 0, 0, 0, 0, 0, 0, 0),
-    Symmetry.LR: (3, 3, 3, 3, 3, 3, 3, 3)
-}
-
-EdgePositionSymmetryMap = {
-    Symmetry.NN: (Edges.UR, Edges.UF, Edges.UL, Edges.UB, Edges.DR, Edges.DF, \
-        Edges.DL, Edges.DB, Edges.FR, Edges.FL, Edges.BL, Edges.BR),
-    Symmetry.F2: (Edges.DL, Edges.DF, Edges.DR, Edges.DB, Edges.UL, Edges.UF, \
-        Edges.UR, Edges.UB, Edges.FL, Edges.FR, Edges.BR, Edges.BL),
-    Symmetry.U4: (Edges.UB, Edges.UR, Edges.UF, Edges.UL, Edges.DB, Edges.DR, \
-        Edges.DF, Edges.DL, Edges.BR, Edges.FR, Edges.FL, Edges.BL),
-    Symmetry.LR: (Edges.UL, Edges.UF, Edges.UR, Edges.UB, Edges.DL, Edges.DF, \
-        Edges.DR, Edges.DB, Edges.FL, Edges.FR, Edges.BR, Edges.BL)
-}
-
-EdgeOrientationSymmetryMap = {
-    Symmetry.NN: (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
-    Symmetry.F2: (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
-    Symmetry.U4: (0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1),
-    Symmetry.LR: (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
-}
-
 def multiplyEdge(edgepos1, edgepos2, edgeori1, edgeori2):
     ''' Multiplies the first tuple of edges by the second tuple of edges. For example:
     Multiplying (UB, UR, UF, UL) by (UL, UF, UB, UR) will return (UR, UL, UF, UB). Multiplying returns
@@ -239,27 +197,7 @@ def multiplyEdge(edgepos1, edgepos2, edgeori1, edgeori2):
     
 def multiplyCorner(cornpos1, cornpos2, cornori1, cornori2):
     ''' Multiplies the first corner by the second corner. Reference multiplyEdge for more details.'''
-    cornPositions = [0 for i in range(8)]
-    cornOrientations = [0 for i in range(8)]
-    for i in range(8): # the most aura I've ever used on the multiplyCorner function (dammit)
-        # refactor eventually to make more pythonic and less shwacky
-        ori = 0
-        cornPositions[i] = cornpos1[cornpos2[i]]
-        cornValA = cornori1[cornpos2[i]]
-        cornValB = cornori2[i]
-        if cornValA == 6 or cornValB == 6: ori = 6
-        elif cornValA < 3 and cornValB < 3:
-            ori = cornValA + cornValB
-            if ori >= 3: ori -= 3
-        elif cornValA < 3 and cornValB >= 3:
-            ori = cornValA + cornValB
-            if ori >= 6: ori -= 3
-        elif cornValA >= 3 and cornValB < 3:
-            ori = cornValA - cornValB
-            if ori < 3: ori += 3
-        elif cornValA >= 3 and cornValB >= 3:
-            ori = cornValA - cornValB
-            if ori < 0: ori += 3
-        cornOrientations[i] = ori
-        # figure this out later lmao this is wacky
+    cornPositions = [cornpos1[cornpos2[i]] for i in range(8)]
+    cornOrientations = [(cornori2[i] + cornori1[cornpos2[i]]) % 3 for i in range(8)]
+    # the most aura I've ever used on the multiplyCorner function (dammit)
     return (cornPositions, cornOrientations)
