@@ -1,6 +1,6 @@
 import facelet # to initialize symmetry tables
 from facelet import FaceletCube
-from const import Moves
+from const import Moves, P2Moves
 import numpy as np
 import pickle
 import os
@@ -53,12 +53,57 @@ def createUDSliceMoveTable():
 def createCornerPermutationMoveTable():
     if os.path.exists('.\\lookups\\CornerPermutationMoveTable.npy'):
         return np.load('.\\lookups\\CornerPermutationMoveTable.npy')
-    moveTable = np.empty((40320, 12), dtype=np.uint32)
+    moveTable = np.empty((40320, 18), dtype=np.uint32)
     tmpCube = FaceletCube()
     for i in range(40320):
-        # coord = CornerPermToRawCornerPerm[i]
         tmpCube.setCornerPermutationCoordinate(i)
+        for move in Moves:
+            for k in range(3):
+                tmpCube.move(move)
+                if move*3+k in P2Moves:
+                    moveTable[i, move*3+k] = tmpCube.getCornerPermutationCoordinate()
+            tmpCube.move(move)
+    np.save('.\\lookups\\CornerPermutationMoveTable', moveTable)
+    return moveTable
+
+def createEdgePermutationMoveTable():
+    if os.path.exists('.\\lookups\\EdgePermutationMoveTable.npy'):
+        return np.load('.\\lookups\\EdgePermutationMoveTable.npy')
+    moveTable = np.empty((40320, 18), dtype=np.uint32)
+    tmpCube = FaceletCube()
+    for i in range(40320):
+        tmpCube.setEdgePermutationCoordinate(i)
+        for move in Moves:
+            for k in range(3):
+                tmpCube.move(move)
+                if move*3+k in P2Moves:
+                    # if any(i in tuple(tmpCube.edgePositions[:8]) for i in range(8, 12)):
+                    #     print('hi')
+                    moveTable[i, move*3+k] = tmpCube.getEdgePermutationCoordinate()
+            tmpCube.move(move)
+    np.save('.\\lookups\\EdgePermutationMoveTable', moveTable)
+    return moveTable
+
+def createUDPermutationMoveTable():
+    if os.path.exists('.\\lookups\\UDPermutationMoveTable.npy'):
+        return np.load('.\\lookups\\UDPermutationMoveTable.npy')
+    moveTable = np.empty((24, 18), dtype=np.uint32)
+    tmpCube = FaceletCube()
+    for i in range(24):
+        tmpCube.setUDPermutationCoordinate(i)
+        for move in Moves:
+            for k in range(3):
+                tmpCube.move(move)
+                if move*3+k in P2Moves:
+                    moveTable[i, move*3+k] = tmpCube.getUDPermutationCoordinate()
+            tmpCube.move(move)
+    np.save('.\\lookups\\UDPermutationMoveTable', moveTable)
+    return moveTable
+                
 
 cornerOrientationMoveTable = createCornerOrientationMoveTable()
 edgeOrientationMoveTable = createEdgeOrientationMoveTable()
 UDSliceMoveTable = createUDSliceMoveTable()
+cornerPermutationMoveTable = createCornerPermutationMoveTable()
+edgePermutationMoveTable = createEdgePermutationMoveTable()
+UDPermutationMoveTable = createUDPermutationMoveTable()

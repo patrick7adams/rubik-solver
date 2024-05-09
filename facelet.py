@@ -5,7 +5,9 @@ from const import multiplyCorner, multiplyEdge
 import os, time, itertools
 import numpy as np
 
-
+cornerPermLookupDict = None
+edgePermLookupDict = None
+UDPermLookupDict = None
 
 
 class FaceletCube:
@@ -123,28 +125,30 @@ class FaceletCube:
                         arr = tuple(1 if x in (i, k, j, l) else 0 for x in range(12))
                         coordinateLookupTable[arr] = FaceletCube.getUDSliceFromEdgesList(arr)
         return coordinateLookupTable
-            
-    def getCornerPermutationCoordinate(self):
-        # if cornerPermLookupDict:
-        #     return cornerPermLookupDict[self.cornerPositions]
-        coord = 0
-        for i in range(1, 8):
-            num = sum(k for k in range(i) if self.cornerPositions[k] > self.cornerPositions[i])
-            coord += factorial(num)
-        return coord
-            
     
-    def setCornerPermutationCoordinate(self, coord):
-        self.cornerPositions = InvCornerPermLookupDict[coord]
-        
     def printCoords(self):
         print('-----------Cube Coordinates------------')
         print(f"CornerOrientation: {self.getCornerOrientationCoordinate()}")
         print(f"EdgeOrientation: {self.getEdgeOrientationCoordinate()}")
         print(f"UDSlice: {self.getUDSliceCoordinate()}")
+        print(f"CornerPermutation: {self.getCornerPermutationCoordinate()}")
+        print(f"EdgePermutation: {self.getEdgePermutationCoordinate()}")
+        print(f"UDPermutation: {self.getUDPermutationCoordinate()}")
+            
+    def getCornerPermutationCoordinate(self):
+        if cornerPermLookupDict:
+            return cornerPermLookupDict[tuple(self.cornerPositions)]
+        coord = 0
+        for i in range(1, 8):
+            num = sum(1 for k in range(i) if self.cornerPositions[k] > self.cornerPositions[i])
+            coord += num*factorial(i)
+        return coord
+    
+    def setCornerPermutationCoordinate(self, coord):
+        self.cornerPositions = InvCornerPermLookupDict[coord]
     
     @staticmethod
-    def createRawCornerPermutationLookupTable():
+    def createCornerPermutationLookupTable():
         tmpCube = FaceletCube()
         cornerCombinations = list(itertools.permutations(tmpCube.cornerPositions))
         lookupTable = {}
@@ -152,28 +156,49 @@ class FaceletCube:
             tmpCube.cornerPositions = cornerCombinations[i]
             lookupTable[tuple(tmpCube.cornerPositions)] = tmpCube.getCornerPermutationCoordinate()
         return lookupTable
-        # for
         
     def getEdgePermutationCoordinate(self):
-        # if edgePermLookupDict:
-        #     return edgePermLookupDict[self.edgePositions[:8]]
+        if edgePermLookupDict:
+            return edgePermLookupDict[tuple(self.edgePositions[:8])]
         coord = 0
         for i in range(1, 8):
-            num = sum(k for k in range(i) if self.edgePositions[k] > self.edgePositions[i])
-            coord += factorial(num)
+            num = sum(1 for k in range(i) if self.edgePositions[k] > self.edgePositions[i])
+            coord += num*factorial(i)
         return coord
     
     def setEdgePermutationCoordinate(self, coord):
-        self.edgePositions = invEdgePermLookupDict[coord] + self.edgePositions[8:]
+        self.edgePositions = invEdgePermLookupDict[coord] + tuple(self.edgePositions[8:])
     
     @staticmethod
-    def createRawEdgePermutationLookupTable():
+    def createEdgePermutationLookupTable():
         tmpCube = FaceletCube()
         edgeCombinations = list(itertools.permutations(tmpCube.edgePositions[:8]))
         lookupTable = {}
         for i in range(40320):
             tmpCube.edgePositions = list(edgeCombinations[i]) + tmpCube.edgePositions[8:]
-            lookupTable[tuple(tmpCube.edgePositions)] = tmpCube.getEdgePermutationCoordinate()
+            lookupTable[tuple(tmpCube.edgePositions[:8])] = tmpCube.getEdgePermutationCoordinate()
+        return lookupTable
+    
+    def getUDPermutationCoordinate(self):
+        if UDPermLookupDict:
+            return UDPermLookupDict[tuple(self.edgePositions[8:])]
+        coord = 0
+        for i in range(9, 12):
+            num = sum(1 for k in range(8, i) if self.edgePositions[k] > self.edgePositions[i])
+            coord += num*factorial(i-8)
+        return coord
+    
+    def setUDPermutationCoordinate(self, coord):
+        self.edgePositions = tuple(self.edgePositions[:8]) + invUDPermLookupDict[coord]
+    
+    @staticmethod
+    def createUDPermutationLookupTable():
+        tmpCube = FaceletCube()
+        edgeCombinations = list(itertools.permutations(tmpCube.edgePositions[8:]))
+        lookupTable = {}
+        for i in range(24):
+            tmpCube.edgePositions = tmpCube.edgePositions[:8] + list(edgeCombinations[i])
+            lookupTable[tuple(tmpCube.edgePositions[8:])] = tmpCube.getUDPermutationCoordinate()
         return lookupTable
     
     def move(self, move):
@@ -196,8 +221,11 @@ def binomial(n, k):
 UDSliceLookupDict = FaceletCube.createUDSliceCoordinateLookupTable()
 InvUDSliceLookupDict = {k:i for i, k in UDSliceLookupDict.items()}
 
-cornerPermLookupDict = FaceletCube.createRawCornerPermutationLookupTable()
+cornerPermLookupDict = FaceletCube.createCornerPermutationLookupTable()
 InvCornerPermLookupDict = {k:i for i, k in cornerPermLookupDict.items()}
 
-edgePermLookupDict = FaceletCube.createRawEdgePermutationLookupTable()
+edgePermLookupDict = FaceletCube.createEdgePermutationLookupTable()
 invEdgePermLookupDict = {k:i for i, k in edgePermLookupDict.items()}
+
+UDPermLookupDict = FaceletCube.createUDPermutationLookupTable()
+invUDPermLookupDict = {k:i for i, k in UDPermLookupDict.items()}
