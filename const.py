@@ -84,7 +84,7 @@ class ExtendedMoves(IntEnum):
     B2 = 16
     B3 = 17
     
-P2Moves = (0, 1, 2, 4, 7, 10, 13, 15, 16, 17)
+P2Moves = (0, 1, 2, 4, 7, 9, 10, 11, 13, 16)
 
 class Corners(IntEnum):
     URF = 0
