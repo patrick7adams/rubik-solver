@@ -1,11 +1,18 @@
 from facelet import FaceletCube
 from const import Moves
 import movetable, pruning, facelet
+from movetable import cornerOrientationMoveTable, edgeOrientationMoveTable, UDSliceMoveTable
+from pruning import cornerOrientationPruningTable, edgeOrientationPruningTable, UDSlicePruningTable
 import numpy as np
 import queue, os
 
+def getDepthPhaseOne(indices):
+    return max(cornerOrientationPruningTable[indices[0]], edgeOrientationPruningTable[indices[1]], UDSlicePruningTable[indices[2]])
+
+def getMovesPhaseOne(indices, move):
+    return (cornerOrientationMoveTable[indices[0], move], edgeOrientationMoveTable[indices[1], move], UDSliceMoveTable[indices[2], move])
         
-def solve(self):
+def solve(cube):
     ''' F score is the number of moves deep + the depth of the position described by the pruning table
     Starts at the start index described by flipUDSlice * 2187 + cornerOrientation, then recursively
     explores the full tree given by the current f score. Then, it will increment the f score by one
@@ -22,57 +29,55 @@ def solve(self):
     - solver works; it goes from any start index to the goal index of 0 and returns the proper moves to reach
     the goal index. However, the indices don't seem to align with the actual moves in this case.
     '''
-    start_index = self.getIndex()
-    threshold = pruningTable[start_index]
+    startCoords = (cube.getCornerOrientationCoordinate(), cube.getEdgeOrientationCoordinate(), cube.getUDSliceCoordinate())
+    threshold = getDepthPhaseOne(startCoords)
     while threshold <= 12:
         visited_indices = queue.LifoQueue()
-        visited_indices.put(start_index)
+        visited_indices.put(startCoords)
         visited_index_distances = queue.LifoQueue()
         visited_index_distances.put(0)
         visited_nodes = 1
         visited_paths = queue.LifoQueue()
         visited_paths.put([])
+        past_indices = queue.LifoQueue()
+        past_indices.put([])
         # conjugate paths into a natural number for faster processing?
-        min_depth = 100
-        min_index = -1
-        min_path = []
+        import time
+        average_times, average_start_times, average_end_times = [], [], []
         while not visited_indices.empty():
-            if visited_nodes % 100000 <= 18: 
-                print(f"Visited {visited_nodes} nodes in threshold {threshold}")
-            index = visited_indices.get()
+            # if visited_nodes % 100000 <= 18: 
+            #     print(f"Visited {visited_nodes} nodes in threshold {threshold}")
+            indices = visited_indices.get()
             distance = visited_index_distances.get()
-            cornerOrientation, flipUDSlice = index % 2187, index // 2187
-            flipUDSliceIndex, flipUDSliceSym = flipUDSlice // 16, flipUDSlice % 16
             path = visited_paths.get()
+            past_index = past_indices.get()
             for move in range(18):
-                newCornerOrientation = movetable.cornerOrientationMoveTable[cornerOrientation, move]
-                newFlipUDSlice = movetable.FlipUDSliceMoveTable[flipUDSliceIndex, FaceletCube.SymMove[flipUDSliceSym, move]]
-                newFlipUDSliceSym = FaceletCube.SymMult[flipUDSliceSym, newFlipUDSlice % 16] # change order back if things break
-                newFlipUDSliceIndex = newFlipUDSlice // 16
-                moved_index = newFlipUDSliceIndex * 2187 + movetable.cornerOrientationSymmetryTable[newCornerOrientation, newFlipUDSliceSym]
-                depth = pruningTable[moved_index]
-                f_score = depth + distance
+                # start_time = time.time()
+                # these two functions take around 1e-06 seconds, six table lookups + max
+                moved_indices = getMovesPhaseOne(indices, move)
+                max_moved_depth = getDepthPhaseOne(moved_indices)
+                f_score = max_moved_depth + distance
                 visited_nodes += 1
+                # takes around 1.8e-07 seconds, may change soon to make more efficient
                 new_path = path + [move]
-                if depth < min_depth:
-                    min_depth = depth
-                    min_index = moved_index
-                    min_path = new_path
-                if moved_index == 0:
-                    # print(f"Index: {index}, path: {path}, move: {move}")
+                new_past_index = past_index + [moved_indices]
+                # time_at_mid = time.time()
+                # mid_time = time_at_mid - start_time
+                # if statements take around 2.8e-07 seconds
+                if not (moved_indices[0] + moved_indices[1] + moved_indices[2]):
+                    # print(sum(average_times) / len(average_times))
+                    # print(sum(average_start_times) / len(average_start_times))
+                    # print(sum(average_end_times) / len(average_end_times))
                     return new_path
                 if f_score <= threshold:
-                    visited_indices.put(moved_index)
+                    visited_indices.put(moved_indices)
                     visited_index_distances.put(distance+1)
                     visited_paths.put(new_path)
+                    past_indices.put(new_past_index)
+                # end_time = time.time() - time_at_mid
+                # total_time = time.time() - start_time
+                # average_start_times.append(mid_time)
+                # average_end_times.append(end_time)
+                # average_times.append(total_time)
         threshold += 1
         print(f"Final visited nodes: {visited_nodes}")
-        print(f"Min depth for this iteration: {min_depth}")
-        print(f"Index at min iteration depth: {min_index}")
-        print(f"Path to minimum depth: {min_path}")
-    
-    
-def print(self):
-    print("------------Coordinate Cube---------------")
-    print(f"CornerOrientation: {self.cornerOrientation}")
-    print(f"FlipUDSlice: {self.FlipUDSliceIndex*16+self.FlipUDSliceSym}\n")
