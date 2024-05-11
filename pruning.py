@@ -95,6 +95,79 @@ def createUDSlicePruningTable():
     np.save('.\\lookups\\UDSlicePruningTable.npy', pruningTable)
     return pruningTable
 
+def createPhaseOnePruningTable():
+    ''' Pruning table that combines all of the phase one elements, for faster indexing. Swaps memory for speed. '''
+    if os.path.exists('.\\lookups\\PhaseOnePruningTable.npy'):
+        return np.load('.\\lookups\\PhaseOnePruningTable.npy')
+    numNodes = 2187*2048*495
+    pruningTable = np.full(numNodes, 255, dtype=np.uint8)
+    filled_nodes = 1
+    depth = 0
+    pass_backwards = False
+    pruningTable[0] = 0
+    print('Generating PhaseOne pruning table...')
+    while filled_nodes != numNodes:
+        print(f'Depth of {depth}: {filled_nodes} / {numNodes} nodes generated.')
+        if filled_nodes > (numNodes/2): pass_backwards = True
+        for i in range(numNodes):
+            if i%1000000 == 0: print(f"{filled_nodes/numNodes*100}%: {filled_nodes} filled of {numNodes}, {i/numNodes*100}% done with current iteration.")
+            if not pass_backwards and pruningTable[i] == depth or pass_backwards and pruningTable[i] == 255:
+                CO = i%2173
+                EO = (i // 2173) % 2048
+                UD = (i // 4450304)
+                for move in range(18):
+                    newCornerOrientation = movetable.cornerOrientationMoveTable[CO, move]
+                    newEdgeOrientation = movetable.edgeOrientationMoveTable[EO, move]
+                    newUDSlice = movetable.UDSliceMoveTable[UD, move]
+                    # 4450304 = 2173 * 2048
+                    index = newUDSlice * (4450304) + newEdgeOrientation * (2173) + newCornerOrientation
+                    if not pass_backwards:
+                        if pruningTable[index] == 255:
+                            pruningTable[index] = depth+1
+                            filled_nodes += 1
+                    else:
+                        if pruningTable[i] == 255 and pruningTable[index] == depth:
+                            pruningTable[i] = depth+1
+                            filled_nodes += 1
+        depth += 1
+    print('Done generating PhaseOne pruning table.')
+    np.save('.\\lookups\\PhaseOnePruningTable.npy', pruningTable)
+    return pruningTable
+
+def createPhaseTwoPruningTable():
+    ''' Pruning table that combines corner and edge permutations, for faster indexing. Swaps memory for speed. (1.6 GB)'''
+    if os.path.exists('.\\lookups\\PhaseTwoPruningTable.npy'):
+        return np.load('.\\lookups\\PhaseTwoPruningTable.npy')
+    numNodes = 40320*40320
+    pruningTable = np.full(numNodes, 255, dtype=np.uint8)
+    filled_nodes = 1
+    depth = 0
+    pass_backwards = False
+    pruningTable[0] = 0
+    print('Generating PhaseTwo pruning table...')
+    while filled_nodes != numNodes:
+        print(f'Depth of {depth}: {filled_nodes} / {numNodes} nodes generated.')
+        if filled_nodes > (numNodes/2): pass_backwards = True
+        for i in range(numNodes):
+            if i%1000000 == 0: print(f"{filled_nodes/numNodes*100}%: {filled_nodes} filled of {numNodes}, {i/numNodes*100}% done with current iteration.")
+            if not pass_backwards and pruningTable[i] == depth or pass_backwards and pruningTable[i] == 255:
+                for move in range(18):
+                    newCornerPermutation = movetable.cornerPermutationMoveTable[i // 40320, move]
+                    newEdgePermutation = movetable.edgePermutationMoveTable[i % 40320, move]
+                    index = newCornerPermutation * (40320) + newEdgePermutation
+                    if not pass_backwards:
+                        if pruningTable[index] == 255:
+                            pruningTable[index] = depth+1
+                            filled_nodes += 1
+                    else:
+                        if pruningTable[i] == 255 and pruningTable[index] == depth:
+                            pruningTable[i] = depth+1
+                            filled_nodes += 1
+        depth += 1
+    print('Done generating PhaseTwo pruning table.')
+    np.save('.\\lookups\\PhaseTwoPruningTable.npy', pruningTable)
+    return pruningTable
+
 def createCornerPermutationPruningTable():
     if os.path.exists('.\\lookups\\CornerPermutationPruningTable.npy'):
         return np.load('.\\lookups\\CornerPermutationPruningTable.npy')
@@ -242,3 +315,5 @@ UDSlicePruningTable = createUDSlicePruningTable()
 cornerPermutationPruningTable = createCornerPermutationPruningTable()
 edgePermutationPruningTable = createEdgePermutationPruningTable()
 UDPermutationPruningTable = createUDPermutationPruningTable()
+PhaseOnePruningTable = createPhaseOnePruningTable()
+PhaseTwoPruningTable = createPhaseTwoPruningTable()

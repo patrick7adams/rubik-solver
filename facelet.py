@@ -49,6 +49,15 @@ class FaceletCube:
             position = EdgeStrings.index(actual_edge[orientation:] + actual_edge[:orientation])
             self.edgePositions.append(Edges(position))
             
+    @staticmethod
+    def copy(cube):
+        tmpCube = FaceletCube()
+        tmpCube.cornerPositions = cube.cornerPositions
+        tmpCube.edgePositions = cube.edgePositions
+        tmpCube.cornerOrientations = cube.cornerOrientations
+        tmpCube.edgeOrientations = cube.edgeOrientations
+        return tmpCube
+            
     def getCornerOrientationCoordinate(self):
         ''' 2187 cases, one case for every permutation of corner orientations. '''
         return sum(self.cornerOrientations[i]*(3**(6-i)) for i in range(len(self.cornerOrientations)-1))

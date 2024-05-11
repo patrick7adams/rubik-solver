@@ -12,7 +12,8 @@ import numpy, sys, random
 if __name__ == "__main__":
     numpy.printoptions(threshold=sys.maxsize)
     string = "RRBUULUUBLDRBRRUDRFBDUFLDFFLDRRDBLFBDFLULLUBFDFFDBRULB"
-    cube = FaceletCube(string)
+    string2 = "UUDUUUUDUFRBRRRRRLBFLBFFLLFDDDUDDUDDLFRLLLFBBRLBBBFFBR"
+    cube = FaceletCube(string2)
     cube2 = FaceletCube()
     
     # pruning.printCornerOrientationPruningIndex(cube.getCornerOrientationCoordinate())
@@ -21,24 +22,22 @@ if __name__ == "__main__":
     import time
     
     # initial_time = time.time()
-    # print(coord.solve(cube))
     # print(time.time() - initial_time)
     
     # cube.printCoords()
-    solve_moves = [9, 15, 1, 14, 10, 2, 3, 2, 15]
+    solve_moves = coord.solve(cube)
+    # solve_moves = [17, 8, 14, 10, 12, 16, 12, 16, 2, 6, 10, 16, 13, 11, 13, 11, 7, 11, 13, 4, 11, 7, 9, 4]
     for move in solve_moves:
         for i in range(move % 3+1):
             cube.move(move//3)
-            
-            
-    print(cube.edgePositions)
     cube.printCoords()
-    pruning.printCornerPermutationPruningIndex(cube.getCornerPermutationCoordinate())
-    pruning.printEdgePermutationPruningIndex(cube.getEdgePermutationCoordinate())
-    pruning.printUDPermutationPruningIndex(cube.getUDPermutationCoordinate())
+    print(' '.join(ExtendedMoves(move).name.replace('3', "'") for move in solve_moves))
+    # pruning.printCornerPermutationPruningIndex(cube.getCornerPermutationCoordinate())
+    # pruning.printEdgePermutationPruningIndex(cube.getEdgePermutationCoordinate())
+    # pruning.printUDPermutationPruningIndex(cube.getUDPermutationCoordinate())
     
         
-    # print(' '.join(ExtendedMoves(move).name for move in solve_moves))
+    
     
         # print('----------------')
     #     # print(movetable.cornerOrientationMoveTable[cube.getCornerOrientationCoordinate(), move])
