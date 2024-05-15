@@ -11,27 +11,21 @@ import numpy, sys, random
 
 if __name__ == "__main__":
     numpy.printoptions(threshold=sys.maxsize)
-    string = "RRBUULUUBLDRBRRUDRFBDUFLDFFLDRRDBLFBDFLULLUBFDFFDBRULB"
-    string2 = "UUDUUUUDUFRBRRRRRLBFLBFFLLFDDDUDDUDDLFRLLLFBBRLBBBFFBR"
-    cube = FaceletCube(string2)
-    cube2 = FaceletCube()
-    
-    # pruning.printCornerOrientationPruningIndex(cube.getCornerOrientationCoordinate())
-    # pruning.printEdgeOrientationPruningIndex(cube.getEdgeOrientationCoordinate())
-    # pruning.printUDSlicePruningIndex(cube.getUDSliceCoordinate())
-    import time
-    
-    # initial_time = time.time()
-    # print(time.time() - initial_time)
-    
-    # cube.printCoords()
+    faceString = "UUDUUUUDUFRBRRRRRLBFLBFFLLFDDDUDDUDDLFRLLLFBBRLBBBFFBR"
+    cube = FaceletCube(faceString)
     solve_moves = coord.solve(cube)
-    # solve_moves = [17, 8, 14, 10, 12, 16, 12, 16, 2, 6, 10, 16, 13, 11, 13, 11, 7, 11, 13, 4, 11, 7, 9, 4]
+    import serial
+    serial_conn = serial.Serial('/dev/ttyACM0', 9600)
+    serial_conn.flush()
+    serial_conn.write((str(len(solve_moves)+'\n')).encode())
     for move in solve_moves:
-        for i in range(move % 3+1):
-            cube.move(move//3)
-    cube.printCoords()
-    print(' '.join(ExtendedMoves(move).name.replace('3', "'") for move in solve_moves))
+        string = str(move) + '\n'
+        serial_conn.write(string.encode())
+    # for move in solve_moves:
+    #     for i in range(move % 3+1):
+    #         cube.move(move//3)
+    # cube.printCoords()
+    # print(' '.join(ExtendedMoves(move).name.replace('3', "'") for move in solve_moves))
     # pruning.printCornerPermutationPruningIndex(cube.getCornerPermutationCoordinate())
     # pruning.printEdgePermutationPruningIndex(cube.getEdgePermutationCoordinate())
     # pruning.printUDPermutationPruningIndex(cube.getUDPermutationCoordinate())
