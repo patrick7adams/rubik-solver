@@ -5,20 +5,24 @@ from movetable import cornerOrientationMoveTable, edgeOrientationMoveTable, UDSl
 from movetable import cornerPermutationMoveTable, edgePermutationMoveTable, UDPermutationMoveTable
 from pruning import cornerOrientationPruningTable, edgeOrientationPruningTable, UDSlicePruningTable
 from pruning import cornerPermutationPruningTable, edgePermutationPruningTable, UDPermutationPruningTable
+from pruning import PhaseOnePruningTable, PhaseTwoPruningTable
+from pruning import getPhaseOneIndex, getPhaseTwoIndex
 import numpy as np
 import queue, os, time
 
-def getDepthPhaseOne(indices):
-    return max(cornerOrientationPruningTable[indices[0]], edgeOrientationPruningTable[indices[1]], UDSlicePruningTable[indices[2]])
+def getMovesPhaseOne(index, move):
+    CO = index%2187
+    EO = (index // 2187) % 2048
+    UD = (index // 4478976)
+    return getPhaseOneIndex(cornerOrientationMoveTable[CO, move], edgeOrientationMoveTable[EO, move], UDSliceMoveTable[UD, move])
 
-def getMovesPhaseOne(indices, move):
-    return (cornerOrientationMoveTable[indices[0], move], edgeOrientationMoveTable[indices[1], move], UDSliceMoveTable[indices[2], move])
-        
 def getDepthPhaseTwo(indices):
-    return max(cornerPermutationPruningTable[indices[0]], edgePermutationPruningTable[indices[1]], UDPermutationPruningTable[indices[2]])
+    return max(PhaseTwoPruningTable[indices[0]], UDPermutationPruningTable[indices[1]])
 
 def getMovesPhaseTwo(indices, move):
-    return (cornerPermutationMoveTable[indices[0], move], edgePermutationMoveTable[indices[1], move], UDPermutationMoveTable[indices[2], move])
+    CP = indices[0] // 40320
+    EP = indices[0] % 40320
+    return (getPhaseTwoIndex(cornerPermutationMoveTable[CP, move], edgePermutationMoveTable[EP, move]), UDPermutationMoveTable[indices[1], move])
         
 def solve(cube):
     ''' F score is the number of moves deep + the depth of the position described by the pruning table
@@ -37,11 +41,14 @@ def solve(cube):
     - solver works; it goes from any start index to the goal index of 0 and returns the proper moves to reach
     the goal index. However, the indices don't seem to align with the actual moves in this case.
     '''
-    startCoords = (cube.getCornerOrientationCoordinate(), cube.getEdgeOrientationCoordinate(), cube.getUDSliceCoordinate())
-    threshold = getDepthPhaseOne(startCoords)
+
+    startCoord = getPhaseOneIndex(cube.getCornerOrientationCoordinate(), cube.getEdgeOrientationCoordinate(), cube.getUDSliceCoordinate())
+    threshold = PhaseOnePruningTable[startCoord]
+    best_solution = None
+    best_score = 1000
     while threshold <= 12:
         visited_indices = queue.LifoQueue()
-        visited_indices.put(startCoords)
+        visited_indices.put(startCoord)
         visited_index_distances = queue.LifoQueue()
         visited_index_distances.put(0)
         visited_nodes = 1
@@ -49,17 +56,18 @@ def solve(cube):
         visited_paths.put([])
         # conjugate paths into a natural number for faster processing?
         # average_times, average_start_times, average_end_times = [], [], []
+        start_time = time.time()
         while not visited_indices.empty():
             # if visited_nodes % 100000 <= 18: 
             #     print(f"Visited {visited_nodes} nodes in threshold {threshold}")
-            indices = visited_indices.get()
+            index = visited_indices.get()
             distance = visited_index_distances.get()
             path = visited_paths.get()
             for move in range(18):
                 # start_time = time.time()
                 # these two functions take around 1e-06 seconds, six table lookups + max
-                moved_indices = getMovesPhaseOne(indices, move)
-                max_moved_depth = getDepthPhaseOne(moved_indices)
+                moved_index = getMovesPhaseOne(index, move)
+                max_moved_depth = PhaseOnePruningTable[moved_index]
                 f_score = max_moved_depth + distance
                 visited_nodes += 1
                 # takes around 1.8e-07 seconds, may change soon to make more efficient
@@ -67,13 +75,21 @@ def solve(cube):
                 # time_at_mid = time.time()
                 # mid_time = time_at_mid - start_time
                 # if statements take around 2.8e-07 seconds
-                if not (moved_indices[0] + moved_indices[1] + moved_indices[2]):
+                if not moved_index:
                     # print(sum(average_times) / len(average_times))
                     # print(sum(average_start_times) / len(average_start_times))
                     # print(sum(average_end_times) / len(average_end_times))
-                    return solvePhaseTwo(cube, new_path)
+                    phase_two_solution = solvePhaseTwo(cube, new_path)
+                    num_U_moves = sum(move < 3 for move in phase_two_solution)
+                    score = (len(phase_two_solution) - num_U_moves) + num_U_moves * 13
+                    if score < best_score:
+                        print(new_path)
+                        print(phase_two_solution)
+                        print(score)
+                        best_solution = phase_two_solution
+                        best_score = score
                 if f_score <= threshold:
-                    visited_indices.put(moved_indices)
+                    visited_indices.put(moved_index)
                     visited_index_distances.put(distance+1)
                     visited_paths.put(new_path)
                 # end_time = time.time() - time_at_mid
@@ -81,6 +97,8 @@ def solve(cube):
                 # average_start_times.append(mid_time)
                 # average_end_times.append(end_time)
                 # average_times.append(total_time)
+            if best_solution and time.time() - start_time > 1:
+                return best_solution
         threshold += 1
         print(f"Final visited nodes: {visited_nodes}")
         
@@ -90,10 +108,10 @@ def solvePhaseTwo(cube, moves):
     for move in moves:
         for k in range(move%3+1):
             tmpCube.move(move // 3)
-    tmpCube.printCoords()
-    initialCoords = (tmpCube.getCornerPermutationCoordinate(), tmpCube.getEdgePermutationCoordinate(), tmpCube.getUDPermutationCoordinate())
+    # tmpCube.printCoords()
+    initialCoords = (getPhaseTwoIndex(tmpCube.getCornerPermutationCoordinate(), tmpCube.getEdgePermutationCoordinate()), tmpCube.getUDPermutationCoordinate())
     threshold = getDepthPhaseTwo(initialCoords)
-    print("Entering phase two")
+    # print("Entering phase two")
     while threshold <= 18:
         visited_indices = queue.LifoQueue()
         visited_indices.put(initialCoords)
@@ -112,7 +130,7 @@ def solvePhaseTwo(cube, moves):
                 f_score = max_moved_depth + distance
                 visited_nodes += 1
                 new_path = path + [move]
-                if not (moved_indices[0] + moved_indices[1] + moved_indices[2]):
+                if not (moved_indices[0] + moved_indices[1]):
                     return moves + new_path
                 if f_score <= threshold:
                     visited_indices.put(moved_indices)

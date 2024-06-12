@@ -95,6 +95,12 @@ def createUDSlicePruningTable():
     np.save('.\\lookups\\UDSlicePruningTable.npy', pruningTable)
     return pruningTable
 
+def getPhaseOneIndex(CO, EO, UD):
+    return UD * 4478976 + EO * 2187 + CO
+
+def getPhaseTwoIndex(CP, EP):
+    return CP * 40320 + EP
+
 def createPhaseOnePruningTable():
     ''' Pruning table that combines all of the phase one elements, for faster indexing. Swaps memory for speed. '''
     if os.path.exists('.\\lookups\\PhaseOnePruningTable.npy'):
@@ -106,21 +112,20 @@ def createPhaseOnePruningTable():
     pass_backwards = False
     pruningTable[0] = 0
     print('Generating PhaseOne pruning table...')
-    while filled_nodes != numNodes:
+    while filled_nodes != numNodes and depth < 11:
         print(f'Depth of {depth}: {filled_nodes} / {numNodes} nodes generated.')
         if filled_nodes > (numNodes/2): pass_backwards = True
         for i in range(numNodes):
             if i%1000000 == 0: print(f"{filled_nodes/numNodes*100}%: {filled_nodes} filled of {numNodes}, {i/numNodes*100}% done with current iteration.")
             if not pass_backwards and pruningTable[i] == depth or pass_backwards and pruningTable[i] == 255:
-                CO = i%2173
-                EO = (i // 2173) % 2048
-                UD = (i // 4450304)
+                CO = i%2187
+                EO = (i // 2187) % 2048
+                UD = (i // 4478976)
                 for move in range(18):
                     newCornerOrientation = movetable.cornerOrientationMoveTable[CO, move]
                     newEdgeOrientation = movetable.edgeOrientationMoveTable[EO, move]
                     newUDSlice = movetable.UDSliceMoveTable[UD, move]
-                    # 4450304 = 2173 * 2048
-                    index = newUDSlice * (4450304) + newEdgeOrientation * (2173) + newCornerOrientation
+                    index = newUDSlice * (4478976) + newEdgeOrientation * (2187) + newCornerOrientation
                     if not pass_backwards:
                         if pruningTable[index] == 255:
                             pruningTable[index] = depth+1
